@@ -1,4 +1,4 @@
-/*jslint browser for white this */
+/*jslint browser for white */
 
 var lineGraph = function (canvasGraph) {
     "use strict";
