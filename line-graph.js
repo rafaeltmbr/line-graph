@@ -80,7 +80,7 @@ var lineGraph = function (canvasGraph) {
 
     var drawGrid = function () {
         ctx.lineWidth = 1;
-        ctx.strokeStyle = "rgb(120, 120, 120, 0.5)";
+        ctx.strokeStyle = "rgb(200, 200, 200)";
         const tenthWidth = canvas.width / 10;
         const tenthHeight = canvas.height / 10;
 
