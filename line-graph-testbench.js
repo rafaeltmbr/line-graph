@@ -13,7 +13,7 @@ var testbench = function () {
 
     var graphConfig = {
         title: {
-            name: "Testbench Graph",
+            name: "Line Graph Testbench",
             color: "darkgreen",
             font: "large sans-serif"
         },

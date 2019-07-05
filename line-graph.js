@@ -371,7 +371,6 @@ var lineGraph = function (canvasGraph) {
         return n;
     };
 
-
     drawGrid();
     return {
         draw: draw,
