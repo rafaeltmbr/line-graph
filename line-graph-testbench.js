@@ -19,7 +19,7 @@ var testbench = function () {
         },
         xAxis: {
             values: ["12:30", "13:00", "13:30"],
-            color: "black",
+            textColor: "brown",
             font: "medium sans-serif"
         },
         yAxis: {
@@ -42,7 +42,9 @@ var testbench = function () {
             lines: 3,
             precision: 2
         },
-        xAxis: true
+        xAxis: {
+            
+        }
     }
 
     var cube = {
@@ -53,15 +55,19 @@ var testbench = function () {
         },
         color: {
             stroke: "rgb(0, 0, 255)",
-            shadow: "rgba(0, 120, 255, 0.2)"
+            shadow: "rgba(0, 120, 255, 0.2)",
+            axis: "black"
         },
         yAxis: {
             lines: 5
+        },
+        xAxis: {
+
         }
     }
 
     fillArrayCoordinates(sin.record, 100, (i) => Math.sin(0.0635 * i));
-    fillArrayCoordinates(cube.record, 100, (i) => i ** 2);
+    fillArrayCoordinates(cube.record, 100, (i) => i ** 3);
 
     graph.setConfig(graphConfig)
     graph.draw(cube);
