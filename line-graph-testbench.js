@@ -27,7 +27,7 @@ var testbench = function () {
         }
     };
 
-    var sin = {
+    var temperature = {
         record: [],
         height: {
             min: 0.0,
@@ -41,7 +41,7 @@ var testbench = function () {
         yAxis: {
             lines: 3,
             precision: 2,
-            title: "sine units",
+            title: "Temperature [°C]",
             verticalTitle: true
         },
         xAxis: {
@@ -49,7 +49,7 @@ var testbench = function () {
         }
     }
 
-    var cube = {
+    var pressure = {
         record: [],
         height: {
             min: 0.60,
@@ -62,19 +62,21 @@ var testbench = function () {
         },
         yAxis: {
             lines: 5,
-            title: "cubic units"
+            title: "Pressure [psig]",
+            verticalTitle: true
         },
         xAxis: {
 
         }
     }
 
-    fillArrayCoordinates(sin.record, 100, (i) => Math.sin(0.0635 * i));
-    fillArrayCoordinates(cube.record, 100, (i) => i ** 3);
+    fillArrayCoordinates(temperature.record, 100, (i) => Math.sin(0.0635 * i) * 3 + 5);
+    fillArrayCoordinates(pressure.record, 100, (i) => Math.sqrt(i) * 4);
 
-    graph.setConfig(graphConfig)
-    graph.draw(cube);
-    graph.draw(sin);
+    graph.setConfig(graphConfig);
+    graph.clear();
+    graph.draw(temperature);
+    graph.draw(pressure);
 };
 
 testbench();

@@ -6,10 +6,6 @@ var lineGraph = function (canvasGraph) {
     var ctx = canvas.getContext("2d");
     var width = canvas.width;
     var height = canvas.height;
-    var gw = width * 0.8;
-    var gwoff = (width - gw) * 0.75;
-    var gh = height * 0.8;
-    var ghoff = (height - gh) / 2;
     var cfg = {
         title: {
             name: "",
@@ -23,9 +19,35 @@ var lineGraph = function (canvasGraph) {
         },
         yAxis: {
             font: "small sans-serif"
-        }
+        },
+        gw: width * 0.8,
+        gwoff: (width - width * 0.8) * 0.75,
+        gh: height * 0.8,
+        ghoff: (height - height * 0.8) / 2
     };
 
+    const drawDefault = {
+        record: [],
+        height: {
+            min: 0.0,
+            max: 1.0
+        },
+        color: {
+            stroke: "rgb(0, 0, 150)",
+            shadow: "rgba(0, 0, 150, 0.2)",
+            axis: "black"
+        },
+        yAxis: {
+            lines: 2,
+            precision: 0,
+            title: "",
+            verticalTitle: true
+        },
+        xAxis: {
+            
+        }
+    };
+    
     var copyAttributes = function (dst, src) {
         Object.keys(src).forEach(function (k) {
             if (typeof dst[k] === typeof src[k])
@@ -116,34 +138,8 @@ var lineGraph = function (canvasGraph) {
             graph.yAxis.verticalTitle = false;
     };
 
-    var validateConfig = function (config) {
-        validateTitle(config);
-        validateXAxis(config);
-        validateYAxis(config);
-    };
-
-    var validateTitle = function (config) {
-        if (!config.title)
-            return;
-
-        Object.keys(config.title).forEach(function (k) {
-            if (validName(config.title[k]) && typeof cfg.title[k] !== 'undefined')
-                cfg.title[k] = config.title[k];
-        });
-    };
-
-    var validateXAxis = function (config) {
-        if (config.xAxis)
-            copyAttributes(cfg.xAxis, config.xAxis);
-    };
-
-    var validateYAxis = function (config) {
-        if (config.xAxis)
-            copyAttributes(cfg.yAxis, config.yAxis);
-    };
-
-    var validName = function (name) {
-        return typeof name === 'string';
+    var setConfig = function (config) {
+        Object.assign(cfg, config);
     };
 
     var clear = function () {
@@ -156,18 +152,18 @@ var lineGraph = function (canvasGraph) {
         ctx.strokeStyle = "rgb(200, 200, 200)";
 
         for (let i = 1; i < 10; i += 1) {
-            drawVerticalLine(gwoff + i * gw / 10, ghoff, gh + ghoff);
-            drawHorizontalLine(ghoff + i * gh / 10, gwoff, gw + gwoff);
+            drawVerticalLine(cfg.gwoff + i * cfg.gw / 10, cfg.ghoff, cfg.gh + cfg.ghoff);
+            drawHorizontalLine(cfg.ghoff + i * cfg.gh / 10, cfg.gwoff, cfg.gw + cfg.gwoff);
         }
         drawEdges();
     };
 
     var drawEdges = function () {
         ctx.strokeStyle = "black";
-        drawVerticalLine(gwoff, ghoff, gh + ghoff);
-        drawHorizontalLine(ghoff, gwoff, gw + gwoff);
-        drawVerticalLine(gwoff + 10 * gw / 10, ghoff, gh + ghoff);
-        drawHorizontalLine(ghoff + 10 * gh / 10, gwoff, gw + gwoff);
+        drawVerticalLine(cfg.gwoff, cfg.ghoff, cfg.gh + cfg.ghoff);
+        drawHorizontalLine(cfg.ghoff, cfg.gwoff, cfg.gw + cfg.gwoff);
+        drawVerticalLine(cfg.gwoff + 10 * cfg.gw / 10, cfg.ghoff, cfg.gh + cfg.ghoff);
+        drawHorizontalLine(cfg.ghoff + 10 * cfg.gh / 10, cfg.gwoff, cfg.gw + cfg.gwoff);
     };
 
     var drawVerticalLine = function (x, y1 = 0, y2 = height) {
@@ -227,24 +223,24 @@ var lineGraph = function (canvasGraph) {
 
     var drawConstantLine = function (graph) {
         if (graph.record[0] >= 0) {
-            var constHeight = gh + ghoff -
-                gh * (graph.height.max + graph.height.min) / 2;
+            var constHeight = cfg.gh + cfg.ghoff -
+                cfg.gh * (graph.height.max + graph.height.min) / 2;
         } else {
-            var constHeight = gh - graph.height.min * gh + ghoff;
+            var constHeight = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
         }
-        drawHorizontalLine(constHeight, gwoff, gw + gwoff);
+        drawHorizontalLine(constHeight, cfg.gwoff, cfg.gw + cfg.gwoff);
     };
 
     var drawLines = function (graph, yMaxMin) {
         var length = graph.record.length;
-        var xStep = gw / (length - 1);
-        var yStep = (graph.height.max - graph.height.min) * gh /
+        var xStep = cfg.gw / (length - 1);
+        var yStep = (graph.height.max - graph.height.min) * cfg.gh /
             (yMaxMin.max - yMaxMin.min);
-        var yOffset = gh - graph.height.min * gh + ghoff;
-        ctx.moveTo(gwoff, yOffset - (graph.record[0] - yMaxMin.min) * yStep);
+        var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
+        ctx.moveTo(cfg.gwoff, yOffset - (graph.record[0] - yMaxMin.min) * yStep);
 
         for (let i = 1; i < length; i += 1)
-            ctx.lineTo(i * xStep + gwoff,
+            ctx.lineTo(i * xStep + cfg.gwoff,
                 yOffset - (graph.record[i] - yMaxMin.min) * yStep);
 
         ctx.stroke();
@@ -252,12 +248,12 @@ var lineGraph = function (canvasGraph) {
 
     var drawCurveShadow = function (graph, yMaxMin) {
         var constantValue = yMaxMin.max - yMaxMin.min === 0;
-        var bottom = gh + ghoff - gh * graph.height.min;
+        var bottom = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
         if (constantValue && yMaxMin.max <= 0)
-            bottom = bottom - gh * (graph.height.max - graph.height.min) / 2;
+            bottom = bottom - cfg.gh * (graph.height.max - graph.height.min) / 2;
 
-        ctx.lineTo(gw + gwoff, bottom);
-        ctx.lineTo(gwoff, bottom);
+        ctx.lineTo(cfg.gw + cfg.gwoff, bottom);
+        ctx.lineTo(cfg.gwoff, bottom);
         ctx.closePath();
         ctx.fill();
     };
@@ -267,22 +263,22 @@ var lineGraph = function (canvasGraph) {
         ctx.strokeStyle = graph.color.axis;
 
         var xHeight = getXAxisHeight(graph, yMaxMin);
-        ctx.moveTo(gwoff, xHeight);
-        ctx.lineTo(gw + gwoff, xHeight);
+        ctx.moveTo(cfg.gwoff, xHeight);
+        ctx.lineTo(cfg.gw + cfg.gwoff, xHeight);
         ctx.stroke();
     };
 
     var getXAxisHeight = function (graph, yMaxMin) {
         var yDiff = yMaxMin.max - yMaxMin.min;
-        var hDiff = (graph.height.max - graph.height.min) * gh;
+        var hDiff = (graph.height.max - graph.height.min) * cfg.gh;
         var offset = (yMaxMin.max > 0 ? 0 : -hDiff / 2);
 
         if (yDiff) {
             var yStep = hDiff / yDiff;
-            var yOffset = gh - graph.height.min * gh + ghoff;
+            var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
             return yOffset + yMaxMin.min * yStep;
         } else {
-            return gh + ghoff - gh * graph.height.min + offset;
+            return cfg.gh + cfg.ghoff - cfg.gh * graph.height.min + offset;
         }
     };
 
@@ -297,7 +293,7 @@ var lineGraph = function (canvasGraph) {
         ctx.textBaseline = "bottom";
         ctx.font = cfg.title.font;
         ctx.fillStyle = cfg.title.color;
-        ctx.fillText(cfg.title.name, gw / 2 + gwoff, ghoff * 0.75);
+        ctx.fillText(cfg.title.name, cfg.gw / 2 + cfg.gwoff, cfg.ghoff * 0.75);
     };
 
     var drawXText = function () {
@@ -305,11 +301,11 @@ var lineGraph = function (canvasGraph) {
         ctx.font = cfg.xAxis.font;
         ctx.fillStyle = cfg.xAxis.textColor;
         var steps = cfg.xAxis.values.length;
-        var space = gw / (steps - 1);
+        var space = cfg.gw / (steps - 1);
 
         for (let i = 0; i < steps; i += 1)
-            ctx.fillText(cfg.xAxis.values[i] + "", gwoff + space * i,
-                gh + ghoff * 1.2);
+            ctx.fillText(cfg.xAxis.values[i] + "", cfg.gwoff + space * i,
+                cfg.gh + cfg.ghoff * 1.2);
     };
 
     var drawYText = function (graph, yMaxMin) {
@@ -320,9 +316,9 @@ var lineGraph = function (canvasGraph) {
         var lim = getFormattedLimit(graph.record, yMaxMin)
         var diff = lim.max - lim.min;
         var valueStep = diff / (graph.yAxis.lines - 1);
-        var yOffset = gh - graph.height.min * gh + ghoff;
+        var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
         var yStep = (graph.height.max - graph.height.min) /
-            (graph.yAxis.lines - 1) * gh;
+            (graph.yAxis.lines - 1) * cfg.gh;
 
         if (diff)
             drawVariableYText(graph, valueStep, lim, yOffset, yStep);
@@ -349,35 +345,35 @@ var lineGraph = function (canvasGraph) {
     var drawVariableYText = function (graph, valueStep, limits, yOffset, yStep) {
         for (let i = 0; i < graph.yAxis.lines; i += 1)
             ctx.fillText((valueStep * i + limits.min).toFixed(graph.yAxis.precision),
-                gwoff * 0.9, yOffset - yStep * i);
+                cfg.gwoff * 0.9, yOffset - yStep * i);
     };
 
     var drawConstantYText = function (graph, value) {
-        var lineLow = gh + ghoff - gh * graph.height.min;
-        var lineHigh = lineLow - gh * (graph.height.max - graph.height.min) / 2;
+        var lineLow = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
+        var lineHigh = lineLow - cfg.gh * (graph.height.max - graph.height.min) / 2;
         var lineZero = (value > 0 ? lineLow : lineHigh);
         var lineConst = (value >= 0 ? lineHigh : lineLow);
 
-        ctx.fillText(value.toFixed(graph.yAxis.precision), gwoff * 0.9, lineConst);
+        ctx.fillText(value.toFixed(graph.yAxis.precision), cfg.gwoff * 0.9, lineConst);
 
         if (graph.xAxis)
-            ctx.fillText('0', gwoff * 0.9, lineZero);
+            ctx.fillText('0', cfg.gwoff * 0.9, lineZero);
     };
 
     var drawYTitle = function (graph) {
         ctx.save();
         ctx.textAlign = "center";
 
-        var horizontalHeight = gh + ghoff - gh * graph.height.max;
+        var horizontalHeight = cfg.gh + cfg.ghoff - cfg.gh * graph.height.max;
         var verticalHeight = horizontalHeight +
-            (graph.height.max - graph.height.min) / 2 * gh;
+            (graph.height.max - graph.height.min) / 2 * cfg.gh;
 
         if (graph.yAxis.verticalTitle) {
-            ctx.translate(gwoff * 0.2, verticalHeight);
+            ctx.translate(cfg.gwoff * 0.2, verticalHeight);
             ctx.rotate(Math.PI * 1.5);
             ctx.fillText(graph.yAxis.title, 0, 0);
         } else {
-            ctx.fillText(graph.yAxis.title, gwoff / 2, horizontalHeight - ghoff / 2);
+            ctx.fillText(graph.yAxis.title, cfg.gwoff / 2, horizontalHeight - cfg.ghoff / 2);
         }
 
         ctx.restore();
@@ -439,6 +435,6 @@ var lineGraph = function (canvasGraph) {
     return {
         draw: draw,
         clear: clear,
-        setConfig: validateConfig
+        setConfig: setConfig
     };
 }
