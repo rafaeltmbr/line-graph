@@ -55,10 +55,10 @@ var lineGraph = function (canvasGraph) {
 
         setupGraph(userConfig);
         drawGraph();
-        
+
         ctx.restore();
     };
-    
+
     var setConfig = function (config) {
         Object.assign(cfg, config);
     };
@@ -68,13 +68,13 @@ var lineGraph = function (canvasGraph) {
         drawGrid();
     };
 
-    var setupGraph = function(userConfig) {
+    var setupGraph = function (userConfig) {
         graph = {};
         Object.assign(graph, drawDefault);
         Object.assign(graph, userConfig);
     };
-    
-    var drawGraph = function() {
+
+    var drawGraph = function () {
         var yMaxMin = maxMin(graph.record);
         drawLineGraph(yMaxMin);
         drawText(yMaxMin);
