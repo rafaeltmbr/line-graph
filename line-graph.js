@@ -34,11 +34,15 @@ var lineGraph = function (canvasGraph) {
     };
 
     var draw = function (graph) {
+        ctx.save();
+
         var yMaxMin = maxMin(graph.record);
         if (checkGraphConfig(graph)) {
             drawLineGraph(graph, yMaxMin);
             drawText(graph, yMaxMin);
         }
+
+        ctx.restore();
     };
 
     var checkGraphConfig = function (graph) {
@@ -53,6 +57,7 @@ var lineGraph = function (canvasGraph) {
     var checkOptions = function (graph) {
         validateDimensions(graph);
         validateColors(graph);
+        validateYText(graph);
     };
 
     var validateDimensions = function (graph) {
@@ -98,6 +103,17 @@ var lineGraph = function (canvasGraph) {
 
     var validInterval = function (interval) {
         return interval && interval.end > interval.start;
+    };
+
+    var validateYText = function (graph) {
+        if (!graph.yAxis)
+            graph.yAxis = {};
+
+        if (typeof graph.yAxis.title !== 'string')
+            graph.yAxis.title = "";
+
+        if (!graph.yAxis.verticalTitle)
+            graph.yAxis.verticalTitle = false;
     };
 
     var validateConfig = function (config) {
@@ -236,8 +252,8 @@ var lineGraph = function (canvasGraph) {
 
     var drawCurveShadow = function (graph, yMaxMin) {
         var constantValue = yMaxMin.max - yMaxMin.min === 0;
-        var bottom = gh + ghoff - gh * graph.height.min;  
-        if ( constantValue && yMaxMin.max <= 0)
+        var bottom = gh + ghoff - gh * graph.height.min;
+        if (constantValue && yMaxMin.max <= 0)
             bottom = bottom - gh * (graph.height.max - graph.height.min) / 2;
 
         ctx.lineTo(gw + gwoff, bottom);
@@ -312,6 +328,8 @@ var lineGraph = function (canvasGraph) {
             drawVariableYText(graph, valueStep, lim, yOffset, yStep);
         else
             drawConstantYText(graph, lim.min, yOffset);
+
+        drawYTitle(graph);
     };
 
     var setupYText = function (graph) {
@@ -340,10 +358,29 @@ var lineGraph = function (canvasGraph) {
         var lineZero = (value > 0 ? lineLow : lineHigh);
         var lineConst = (value >= 0 ? lineHigh : lineLow);
 
-        ctx.fillText(value.toFixed(graph.yAxis.precision), gwoff*0.9,lineConst);
-        
+        ctx.fillText(value.toFixed(graph.yAxis.precision), gwoff * 0.9, lineConst);
+
         if (graph.xAxis)
             ctx.fillText('0', gwoff * 0.9, lineZero);
+    };
+
+    var drawYTitle = function (graph) {
+        ctx.save();
+        ctx.textAlign = "center";
+
+        var horizontalHeight = gh + ghoff - gh * graph.height.max;
+        var verticalHeight = horizontalHeight +
+            (graph.height.max - graph.height.min) / 2 * gh;
+
+        if (graph.yAxis.verticalTitle) {
+            ctx.translate(gwoff * 0.2, verticalHeight);
+            ctx.rotate(Math.PI * 1.5);
+            ctx.fillText(graph.yAxis.title, 0, 0);
+        } else {
+            ctx.fillText(graph.yAxis.title, gwoff / 2, horizontalHeight - ghoff / 2);
+        }
+
+        ctx.restore();
     };
 
     var formatMin = function (min) {

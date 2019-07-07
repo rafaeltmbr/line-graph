@@ -40,7 +40,9 @@ var testbench = function () {
         },
         yAxis: {
             lines: 3,
-            precision: 2
+            precision: 2,
+            title: "sine units",
+            verticalTitle: true
         },
         xAxis: {
             
@@ -59,7 +61,8 @@ var testbench = function () {
             axis: "black"
         },
         yAxis: {
-            lines: 5
+            lines: 5,
+            title: "cubic units"
         },
         xAxis: {
 
