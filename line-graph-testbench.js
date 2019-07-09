@@ -110,7 +110,7 @@ var testbench = function () {
         graph.draw(temperature);
         graph.draw(pressure);
         
-        setTimeout(updateGraphTime, 500);
+        setTimeout(updateGraphTime, 950);
     };
     
     var updateAverage = function(avg, min, max) {

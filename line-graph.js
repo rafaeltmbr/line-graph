@@ -56,9 +56,13 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         x: -1,
         y: -1,
         visible: false
-    }
+    };
+    var cursor = {
+        x: 0,
+        y: 0
+    };
 
-    var draw = function (userConfig, mouseOverX = -1, mouseOverY = -1) {
+    var draw = function (userConfig, mouseOverX, mouseOverY) {
         ctx.save();
 
         setupGraph(userConfig);
@@ -377,25 +381,32 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
     };
 
     var drawMarkPoint = function (x, y) {
-        if (isPointOverGraph(x, y)) {
-            var xoff = x - cfg.gwoff;
-            var len = graph.record.length;
-            var index = xoff * (graph.record.length-1) / cfg.gw;
-            var indexL = Math.floor(index);
-            var indexH = indexL + 1 >= len ? len-1 : indexL + 1;
-            var recordL = graph.record[indexL];
-            var recordH = graph.record[indexH];
-            var record = (recordH - recordL) * (index - indexL) + recordL;
-            var deltaY = (graph.height.max - graph.height.min) * cfg.gh /
-                (yMaxMin.max - yMaxMin.min);
-            var baseY = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
-            var pointY = baseY - (record - yMaxMin.min) * deltaY;
-            drawPointLine(x);
-            drawPoint(x, pointY);
-            drawYValue(record.toFixed(graph.yAxis.precision),
-                x, pointY - 2 * cfg.pointRadius);
-            drawXValue(xoff / cfg.gw);
+        if (typeof x !== 'undefined' && typeof y !== 'undefined') {
+            cursor.x = x;
+            cursor.y = y;
         }
+        if (isPointOverGraph(cursor.x, cursor.y))
+            drawPointAndLine();
+    };
+    
+    var drawPointAndLine = function() {
+        var xoff = cursor.x - cfg.gwoff;
+        var len = graph.record.length;
+        var index = xoff * (graph.record.length-1) / cfg.gw;
+        var indexL = Math.floor(index);
+        var indexH = indexL + 1 >= len ? len-1 : indexL + 1;
+        var recordL = graph.record[indexL];
+        var recordH = graph.record[indexH];
+        var record = (recordH - recordL) * (index - indexL) + recordL;
+        var deltaY = (graph.height.max - graph.height.min) * cfg.gh /
+        (yMaxMin.max - yMaxMin.min);
+        var baseY = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
+        var pointY = baseY - (record - yMaxMin.min) * deltaY;
+        drawPointLine(cursor.x);
+        drawPoint(cursor.x, pointY);
+        drawYValue(record.toFixed(graph.yAxis.precision),
+        cursor.x, pointY - 2 * cfg.pointRadius);
+        drawXValue(xoff / cfg.gw);
     };
 
     var isPointOverGraph = function (x, y) {
