@@ -81,6 +81,11 @@ var testbench = function () {
         },
         xAxis: {
 
+        },
+        range: {
+            fixed: true,
+            min: 5,
+            max: 55
         }
     };
     
@@ -110,7 +115,7 @@ var testbench = function () {
         graph.draw(temperature);
         graph.draw(pressure);
         
-        setTimeout(updateGraphTime, 950);
+        setTimeout(updateGraphTime, 200);
     };
     
     var updateAverage = function(avg, min, max) {

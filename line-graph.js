@@ -21,11 +21,6 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         yAxis: {
             font: "small sans-serif"
         },
-        range: {
-            fixed: false,
-            min: 0,
-            max: 0
-        },
         gw: width * 0.8,
         gwoff: (width - width * 0.8) * 0.75,
         gh: height * 0.7,
@@ -52,6 +47,11 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         },
         xAxis: {
 
+        },
+        range: {
+            fixed: false,
+            min: 0,
+            max: 100
         }
     };
 
@@ -72,10 +72,10 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         yMaxMin = maxMin(graph.record);
         drawGraph();
         drawMarkPoint(mouseOverX, mouseOverY);
-        
+
         ctx.restore();
     };
-    
+
     var setupGraph = function (userConfig) {
         graph = {};
         Object.assign(graph, drawDefault);
@@ -110,7 +110,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         drawCurve();
         drawCurveShadow();
 
-        if (graph.xAxis)
+        if ( graph.xAxis && ( !graph.range.fixed || graph.range.min <= 0 ) )
             drawXAxis();
     };
 
@@ -152,7 +152,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         ctx.strokeStyle = graph.color.axis;
 
         var xHeight = getXAxisHeight();
-        if(xHeight <= cfg.gh + cfg.ghoff) {
+        if (xHeight <= cfg.gh + cfg.ghoff) {
             ctx.moveTo(cfg.gwoff, xHeight);
             ctx.lineTo(cfg.gw + cfg.gwoff, xHeight);
             ctx.stroke();
@@ -183,7 +183,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
             return;
 
         setupYText();
-        var lim = getFormattedLimit(yMaxMin)
+        var lim = getFormattedLimit(graph.range.fixed ? graph.range : yMaxMin);
         var diff = lim.max - lim.min;
         var valueStep = diff / (graph.yAxis.lines - 1);
         var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
@@ -209,13 +209,46 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
     };
 
     var drawLines = function () {
+        if (graph.range.fixed)
+            drawFixedRangeLines();
+        else
+            drawFreeRangeLines();
+    };
+
+    var drawFixedRangeLines = function () {
         var length = graph.record.length;
         var xStep = cfg.gw / (length - 1);
+        var yOffset = cfg.gh + cfg.ghoff - graph.height.min * cfg.gh;
+        var rangeDiff = graph.range.max - graph.range.min;
+        var yStep = (graph.height.max - graph.height.min) * cfg.gh / rangeDiff;
+        var yMax = yOffset - yStep * rangeDiff;
+        var record0 = graph.record[0] > graph.range.max ? graph.range.max
+                    : graph.record[0] < graph.range.min ? graph.range.min
+                    : graph.record[0];
+
+        ctx.moveTo(cfg.gwoff, yOffset - (record0 - graph.range.min) * yStep);
+        for (let i = 1; i < length; i += 1) {
+            var record = graph.record[i];
+            if (record >= graph.range.min && record <= graph.range.max) {
+                ctx.lineTo(i * xStep + cfg.gwoff,
+                    yOffset - (record - graph.range.min) * yStep);
+            } else {
+                ctx.lineTo(i * xStep + cfg.gwoff,
+                    (record > graph.range.max ? yMax : yOffset));
+            }
+        }
+
+        ctx.stroke();
+    };
+
+    var drawFreeRangeLines = function () {
+        var length = graph.record.length;
+        var xStep = cfg.gw / (length - 1);
+        var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
         var yStep = (graph.height.max - graph.height.min) * cfg.gh /
             (yMaxMin.max - yMaxMin.min);
-        var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
-        ctx.moveTo(cfg.gwoff, yOffset - (graph.record[0] - yMaxMin.min) * yStep);
 
+        ctx.moveTo(cfg.gwoff, yOffset- (graph.record[0] - yMaxMin.min) * yStep);
         for (let i = 1; i < length; i += 1)
             ctx.lineTo(i * xStep + cfg.gwoff,
                 yOffset - (graph.record[i] - yMaxMin.min) * yStep);
@@ -362,24 +395,34 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         if (isPointOverGraph(cursor.x, cursor.y))
             drawPointAndLine();
     };
-    
-    var drawPointAndLine = function() {
+
+    var drawPointAndLine = function () {
+        var rangeDiff = graph.range.fixed ? graph.range.max - graph.range.min
+                                          : yMaxMin.max - yMaxMin.min;
+        var minValue = graph.range.fixed ? graph.range.min : yMaxMin.min;
         var xoff = cursor.x - cfg.gwoff;
         var len = graph.record.length;
-        var index = xoff * (graph.record.length-1) / cfg.gw;
+        var index = xoff * (graph.record.length - 1) / cfg.gw;
         var indexL = Math.floor(index);
-        var indexH = indexL + 1 >= len ? len-1 : indexL + 1;
+        var indexH = indexL + 1 >= len ? len - 1 : indexL + 1;
         var recordL = graph.record[indexL];
         var recordH = graph.record[indexH];
         var record = (recordH - recordL) * (index - indexL) + recordL;
-        var deltaY = (graph.height.max - graph.height.min) * cfg.gh /
-        (yMaxMin.max - yMaxMin.min);
+        var deltaY = (graph.height.max - graph.height.min) * cfg.gh / rangeDiff;
         var baseY = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
-        var pointY = baseY - (record - yMaxMin.min) * deltaY;
+        var pointY = baseY - (record - minValue) * deltaY;
+
+        if (graph.range.fixed) {
+            if (record > graph.range.max)
+                pointY = baseY - rangeDiff * deltaY;
+            else if(record < graph.range.min)
+                pointY = baseY;
+        }
+                
         drawPointLine(cursor.x);
         drawPoint(cursor.x, pointY);
         drawYValue(record.toFixed(graph.yAxis.precision),
-        cursor.x, pointY - 2 * cfg.pointRadius);
+            cursor.x, pointY - 2 * cfg.pointRadius);
         drawXValue(xoff / cfg.gw);
     };
 
@@ -397,7 +440,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         ctx.restore();
     };
 
-    var drawYValue = function(value, x, y) {
+    var drawYValue = function (value, x, y) {
         ctx.save();
         ctx.beginPath();
         ctx.font = cfg.yAxis.font;
@@ -408,7 +451,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         ctx.restore();
     };
 
-    var drawPointLine = function(x) {
+    var drawPointLine = function (x) {
         if (pointLine.visible)
             return;
         pointLine.visible = true;
