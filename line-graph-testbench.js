@@ -54,7 +54,7 @@ var testbench = function () {
         },
         yAxis: {
             lines: 3,
-            precision: 2,
+            precision: 1,
             title: "Temperature [°C]",
             verticalTitle: true
         },
@@ -144,7 +144,7 @@ var testbench = function () {
     }
 
     for (let i=0; i < 100; i++) {
-        updateAverage(temperatureAverage, -10, 20);
+        updateAverage(temperatureAverage, -20, 20);
         updateAverage(pressureAverage, 0, 80);
     }
 

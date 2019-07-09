@@ -183,7 +183,8 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
             return;
 
         setupYText();
-        var lim = getFormattedLimit(graph.range.fixed ? graph.range : yMaxMin);
+        var lim = getFormattedLimit(graph.range.fixed ? graph.range : yMaxMin,
+            graph.yAxis.precision);
         var diff = lim.max - lim.min;
         var valueStep = diff / (graph.yAxis.lines - 1);
         var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
@@ -291,10 +292,26 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         ctx.textBaseline = "middle";
     };
 
-    var getFormattedLimit = function (lim) {
+    var getFormattedLimit = function (lim, precision) {
+        var limMax = lim.max;
+        var limMin = lim.min;
+
+        for (let i = 0; i < precision; i += 1) {
+            limMax *= 10;
+            limMin *= 10;
+        }
+
+        limMax = Math.ceil(limMax);
+        limMin = Math.floor(limMin);
+
+        for (let i = 0; i < precision; i += 1) {
+            limMax /= 10;
+            limMin /= 10;
+        }
+
         return {
-            min: formatMin(lim.min),
-            max: formatMax(lim.max)
+            min: limMin,
+            max: limMax
         };
     };
 
@@ -333,58 +350,6 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         }
 
         ctx.restore();
-    };
-
-    var formatMin = function (min) {
-        if (min > 10)
-            return formatGraterThan10(min, Math.floor);
-        else if (min < 0)
-            return formatLessThan0(min, Math.floor);
-        else
-            return Math.floor(min);
-    };
-
-    var formatMax = function (max) {
-        if (max > 10)
-            return formatGraterThan10(max, Math.ceil);
-        else if (max < 0)
-            return formatLessThan0(max, Math.ceil);
-        else
-            return Math.ceil(max);
-    };
-
-    var formatGraterThan10 = function (n, round) {
-        var offsetCount = 0;
-
-        while (n > 10) {
-            n /= 10;
-            offsetCount += 1;
-        }
-
-        n = round(n);
-        while (offsetCount > 0) {
-            n *= 10;
-            offsetCount -= 1;
-        }
-
-        return n;
-    };
-
-    var formatLessThan0 = function (n, round) {
-        var offsetCount = 0;
-
-        while (n < -10) {
-            n *= 10;
-            offsetCount += 1;
-        }
-
-        n = round(n);
-        while (offsetCount > 0) {
-            n /= 10;
-            offsetCount -= 1;
-        }
-
-        return n;
     };
 
     var drawMarkPoint = function (x, y) {
