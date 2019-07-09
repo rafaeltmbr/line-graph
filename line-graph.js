@@ -1,5 +1,20 @@
 /*jslint browser for white */
 
+Object.prototype.deepCopy = function deepCopyObject(target, source) {
+    Object.keys(source).forEach(function (k) {
+        if (source.hasOwnProperty(k)) {
+            if (typeof source[k] === 'object' && !(source[k] instanceof Array)) {
+                if (typeof target[k] === 'undefined') {
+                    target[k] = {};
+                }
+                deepCopyObject(target[k], source[k]);
+            } else {
+                target[k] = source[k];
+            }
+        }
+    });
+};
+
 var lineGraph = function (canvasGraph, xAxisValueCallback) {
     "use strict";
     var canvas = canvasGraph;
@@ -36,8 +51,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         },
         color: {
             stroke: "rgb(0, 0, 255)",
-            shadow: "rgba(0, 100, 255, 0.15)",
-            axis: "black"
+            shadow: "rgba(0, 100, 255, 0.15)"
         },
         yAxis: {
             lines: 2,
@@ -46,7 +60,8 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
             verticalTitle: false
         },
         xAxis: {
-
+            visible: true,
+            color: "black"
         },
         range: {
             fixed: false,
@@ -78,8 +93,8 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
 
     var setupGraph = function (userConfig) {
         graph = {};
-        Object.assign(graph, drawDefault);
-        Object.assign(graph, userConfig);
+        Object.deepCopy(graph, drawDefault);
+        Object.deepCopy(graph, userConfig);
     };
 
     var maxMin = function (array) {
@@ -110,7 +125,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         drawCurve();
         drawCurveShadow();
 
-        if ( graph.xAxis && ( !graph.range.fixed || graph.range.min <= 0 ) )
+        if (graph.xAxis.visible && (!graph.range.fixed || graph.range.min <= 0))
             drawXAxis();
     };
 
@@ -138,25 +153,36 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
     var drawCurveShadow = function () {
         var constantValue = yMaxMin.max - yMaxMin.min === 0;
         var bottom = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
-        if (constantValue && yMaxMin.max <= 0)
-            bottom = bottom - cfg.gh * (graph.height.max - graph.height.min) / 2;
+        var top = cfg.gh + cfg.ghoff - cfg.gh * graph.height.max;
+        var xAxis = getXAxisHeight();
 
-        ctx.lineTo(cfg.gw + cfg.gwoff, bottom);
-        ctx.lineTo(cfg.gwoff, bottom);
+        if (xAxis > bottom)
+            xAxis = bottom;
+        else if (xAxis < top)
+            xAxis = top;
+
+        ctx.lineTo(cfg.gw + cfg.gwoff, xAxis);
+        ctx.lineTo(cfg.gwoff, xAxis);
         ctx.closePath();
         ctx.fill();
     };
 
     var drawXAxis = function () {
-        ctx.beginPath();
-        ctx.strokeStyle = graph.color.axis;
-
+        var yMax = cfg.gh + cfg.ghoff - cfg.gh * graph.height.max;
+        var yMin = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
         var xHeight = getXAxisHeight();
-        if (xHeight <= cfg.gh + cfg.ghoff) {
-            ctx.moveTo(cfg.gwoff, xHeight);
-            ctx.lineTo(cfg.gw + cfg.gwoff, xHeight);
-            ctx.stroke();
-        }
+
+        if (xHeight > yMin || xHeight < yMax)
+            return;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = graph.xAxis.color;
+        ctx.lineWidth = graph.xAxis.width;
+        ctx.moveTo(cfg.gwoff, xHeight);
+        ctx.lineTo(cfg.gw + cfg.gwoff, xHeight);
+        ctx.stroke();
+        ctx.restore();
     };
 
     var drawTitle = function () {
@@ -191,10 +217,10 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         var yStep = (graph.height.max - graph.height.min) /
             (graph.yAxis.lines - 1) * cfg.gh;
 
-        if (diff)
+        if (yMaxMin.max - yMaxMin.min)
             drawVariableYText(valueStep, lim, yOffset, yStep);
         else
-            drawConstantYText(lim.min, yOffset);
+            drawConstantYText(yMaxMin.max, yOffset);
 
         drawYTitle();
     };
@@ -223,9 +249,9 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         var rangeDiff = graph.range.max - graph.range.min;
         var yStep = (graph.height.max - graph.height.min) * cfg.gh / rangeDiff;
         var yMax = yOffset - yStep * rangeDiff;
-        var record0 = graph.record[0] > graph.range.max ? graph.range.max
-                    : graph.record[0] < graph.range.min ? graph.range.min
-                    : graph.record[0];
+        var record0 = graph.record[0] > graph.range.max ? graph.range.max :
+            graph.record[0] < graph.range.min ? graph.range.min :
+            graph.record[0];
 
         ctx.moveTo(cfg.gwoff, yOffset - (record0 - graph.range.min) * yStep);
         for (let i = 1; i < length; i += 1) {
@@ -249,7 +275,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         var yStep = (graph.height.max - graph.height.min) * cfg.gh /
             (yMaxMin.max - yMaxMin.min);
 
-        ctx.moveTo(cfg.gwoff, yOffset- (graph.record[0] - yMaxMin.min) * yStep);
+        ctx.moveTo(cfg.gwoff, yOffset - (graph.record[0] - yMaxMin.min) * yStep);
         for (let i = 1; i < length; i += 1)
             ctx.lineTo(i * xStep + cfg.gwoff,
                 yOffset - (graph.record[i] - yMaxMin.min) * yStep);
@@ -258,17 +284,22 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
     };
 
     var getXAxisHeight = function () {
-        var yDiff = yMaxMin.max - yMaxMin.min;
-        var hDiff = (graph.height.max - graph.height.min) * cfg.gh;
-        var offset = (yMaxMin.max > 0 ? 0 : -hDiff / 2);
+        var yMaxMinDiff = yMaxMin.max - yMaxMin.min;
+        var yDiff = graph.range.fixed ? graph.range.max - graph.range.min :
+            yMaxMinDiff;
+        var min = graph.range.fixed ? graph.range.min : yMaxMin.min;
+        var heightDiff = graph.height.max - graph.height.min;
+        var deltaY = heightDiff * cfg.gh / yDiff;
+        var bottomY = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
+        var middleY = bottomY - cfg.gh * heightDiff / 2;
 
-        if (yDiff) {
-            var yStep = hDiff / yDiff;
-            var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
-            return yOffset + yMaxMin.min * yStep;
-        } else {
-            return cfg.gh + cfg.ghoff - cfg.gh * graph.height.min + offset;
+        if (yMaxMinDiff === 0) {
+            if (yMaxMin.max < 0)
+                return middleY;
+            else
+                return bottomY;
         }
+        return bottomY + min * deltaY;
     };
 
     var drawHorizontalLine = function (y, x1 = 0, x2 = width) {
@@ -362,8 +393,8 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
     };
 
     var drawPointAndLine = function () {
-        var rangeDiff = graph.range.fixed ? graph.range.max - graph.range.min
-                                          : yMaxMin.max - yMaxMin.min;
+        var rangeDiff = graph.range.fixed ? graph.range.max - graph.range.min :
+            yMaxMin.max - yMaxMin.min;
         var minValue = graph.range.fixed ? graph.range.min : yMaxMin.min;
         var xoff = cursor.x - cfg.gwoff;
         var len = graph.record.length;
@@ -376,18 +407,22 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         var deltaY = (graph.height.max - graph.height.min) * cfg.gh / rangeDiff;
         var baseY = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
         var pointY = baseY - (record - minValue) * deltaY;
+        var valueOffset = graph.xAxis.visible && record < 0 ? 4 : -4;
+        var middleY = baseY - cfg.gh * (graph.height.max - graph.height.min) / 2;
 
-        if (graph.range.fixed) {
+        if (yMaxMin.max - yMaxMin.min === 0)
+            pointY = record < 0 ? baseY : middleY;
+        else if (graph.range.fixed) {
             if (record > graph.range.max)
                 pointY = baseY - rangeDiff * deltaY;
-            else if(record < graph.range.min)
+            else if (record < graph.range.min)
                 pointY = baseY;
         }
-                
+
         drawPointLine(cursor.x);
         drawPoint(cursor.x, pointY);
         drawYValue(record.toFixed(graph.yAxis.precision),
-            cursor.x, pointY - 2 * cfg.pointRadius);
+            cursor.x, pointY + valueOffset * cfg.pointRadius);
         drawXValue(xoff / cfg.gw);
     };
 
@@ -410,7 +445,7 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         ctx.beginPath();
         ctx.font = cfg.yAxis.font;
         ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
+        ctx.textBaseline = "middle";
         ctx.fillStyle = graph.color.stroke;
         ctx.fillText(value + "", x, y);
         ctx.restore();

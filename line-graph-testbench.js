@@ -44,13 +44,12 @@ var testbench = function () {
     var temperature = {
         record: [],
         height: {
-            min: 0.0,
-            max: 0.40
+            min: 0.05,
+            max: 0.45
         },
         color: {
             stroke: "rgb(150, 0, 150)",
-            shadow: "rgba(150, 0, 150, 0.2)",
-            axis: "gray"
+            shadow: "rgba(150, 0, 150, 0.2)"
         },
         yAxis: {
             lines: 3,
@@ -59,7 +58,9 @@ var testbench = function () {
             verticalTitle: true
         },
         xAxis: {
-
+            visible: true,
+            color: "red",
+            width: 1
         }
     };
 
@@ -71,8 +72,7 @@ var testbench = function () {
         },
         color: {
             stroke: "rgb(0, 0, 255)",
-            shadow: "rgba(0, 120, 255, 0.2)",
-            axis: "black"
+            shadow: "rgba(0, 120, 255, 0.2)"
         },
         yAxis: {
             lines: 5,
@@ -80,12 +80,12 @@ var testbench = function () {
             verticalTitle: true
         },
         xAxis: {
-
+            visible: true
         },
         range: {
             fixed: true,
-            min: 5,
-            max: 55
+            min: 0,
+            max: 45
         }
     };
     
@@ -103,7 +103,7 @@ var testbench = function () {
             var prevFormat = prev.getHours() + ":" + prev.getMinutes() + ":"
             + prev.getSeconds();
             
-        graphConfig.xAxis.values = [prevFormat, nowFormat];
+        graphConfig.xAxis.values = [prevFormat, "Time", nowFormat];
         
         temperature.record.shift();
         temperature.record.push(temperatureAverage.avg);
@@ -115,7 +115,7 @@ var testbench = function () {
         graph.draw(temperature);
         graph.draw(pressure);
         
-        setTimeout(updateGraphTime, 200);
+        setTimeout(updateGraphTime, 50);
     };
     
     var updateAverage = function(avg, min, max) {
@@ -128,8 +128,8 @@ var testbench = function () {
     };
 
     var autoUpdateAverage = function() {
-        updateAverage(temperatureAverage, -10, 20);
-        updateAverage(pressureAverage, 0, 80);
+        updateAverage(temperatureAverage, -20, 20);
+        updateAverage(pressureAverage, 5, 45);
         setTimeout(autoUpdateAverage, 50);
     };
     
@@ -145,7 +145,7 @@ var testbench = function () {
 
     for (let i=0; i < 100; i++) {
         updateAverage(temperatureAverage, -20, 20);
-        updateAverage(pressureAverage, 0, 80);
+        updateAverage(pressureAverage, 0, 40);
     }
 
     updateGraph();
