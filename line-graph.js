@@ -21,6 +21,11 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         yAxis: {
             font: "small sans-serif"
         },
+        range: {
+            fixed: false,
+            min: 0,
+            max: 0
+        },
         gw: width * 0.8,
         gwoff: (width - width * 0.8) * 0.75,
         gh: height * 0.7,
@@ -53,8 +58,6 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
     var graph = {};
     var yMaxMin = {};
     var pointLine = {
-        x: -1,
-        y: -1,
         visible: false
     };
     var cursor = {
@@ -69,71 +72,14 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         yMaxMin = maxMin(graph.record);
         drawGraph();
         drawMarkPoint(mouseOverX, mouseOverY);
-
+        
         ctx.restore();
     };
-
-    var setConfig = function (config) {
-        Object.assign(cfg, config);
-    };
-
-    var clear = function () {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawGrid();
-        pointLine.visible = false;
-    };
-
+    
     var setupGraph = function (userConfig) {
         graph = {};
         Object.assign(graph, drawDefault);
         Object.assign(graph, userConfig);
-    };
-
-    var drawGraph = function () {
-        drawLineGraph();
-        drawText();
-    };
-
-    var drawGrid = function () {
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "rgb(200, 200, 200)";
-
-        for (let i = 1; i < 10; i += 1) {
-            drawVerticalLine(cfg.gwoff + i * cfg.gw / 10, cfg.ghoff, cfg.gh + cfg.ghoff);
-            drawHorizontalLine(cfg.ghoff + i * cfg.gh / 10, cfg.gwoff, cfg.gw + cfg.gwoff);
-        }
-        drawEdges();
-    };
-
-    var drawEdges = function () {
-        ctx.strokeStyle = "black";
-        drawVerticalLine(cfg.gwoff, cfg.ghoff, cfg.gh + cfg.ghoff);
-        drawHorizontalLine(cfg.ghoff, cfg.gwoff, cfg.gw + cfg.gwoff);
-        drawVerticalLine(cfg.gwoff + 10 * cfg.gw / 10, cfg.ghoff, cfg.gh + cfg.ghoff);
-        drawHorizontalLine(cfg.ghoff + 10 * cfg.gh / 10, cfg.gwoff, cfg.gw + cfg.gwoff);
-    };
-
-    var drawVerticalLine = function (x, y1 = 0, y2 = height) {
-        ctx.beginPath();
-        ctx.moveTo(x, y1);
-        ctx.lineTo(x, y2);
-        ctx.stroke();
-    };
-
-    var drawHorizontalLine = function (y, x1 = 0, x2 = width) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y);
-        ctx.lineTo(x2, y);
-        ctx.stroke();
-    };
-
-    var drawLineGraph = function () {
-        setupLines(graph.color);
-        drawCurve();
-        drawCurveShadow();
-
-        if (graph.xAxis)
-            drawXAxis();
     };
 
     var maxMin = function (array) {
@@ -154,6 +100,27 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         };
     };
 
+    var drawGraph = function () {
+        drawLineGraph();
+        drawText();
+    };
+
+    var drawLineGraph = function () {
+        setupLines(graph.color);
+        drawCurve();
+        drawCurveShadow();
+
+        if (graph.xAxis)
+            drawXAxis();
+    };
+
+    var drawText = function () {
+        ctx.textAlign = "center";
+        drawTitle();
+        drawXText();
+        drawYText();
+    };
+
     var setupLines = function (color) {
         ctx.beginPath();
         ctx.lineWidth = 2;
@@ -166,31 +133,6 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
             drawConstantLine(graph);
         else
             drawLines();
-    };
-
-    var drawConstantLine = function () {
-        if (graph.record[0] >= 0) {
-            var constHeight = cfg.gh + cfg.ghoff -
-                cfg.gh * (graph.height.max + graph.height.min) / 2;
-        } else {
-            var constHeight = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
-        }
-        drawHorizontalLine(constHeight, cfg.gwoff, cfg.gw + cfg.gwoff);
-    };
-
-    var drawLines = function () {
-        var length = graph.record.length;
-        var xStep = cfg.gw / (length - 1);
-        var yStep = (graph.height.max - graph.height.min) * cfg.gh /
-            (yMaxMin.max - yMaxMin.min);
-        var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
-        ctx.moveTo(cfg.gwoff, yOffset - (graph.record[0] - yMaxMin.min) * yStep);
-
-        for (let i = 1; i < length; i += 1)
-            ctx.lineTo(i * xStep + cfg.gwoff,
-                yOffset - (graph.record[i] - yMaxMin.min) * yStep);
-
-        ctx.stroke();
     };
 
     var drawCurveShadow = function () {
@@ -215,27 +157,6 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
             ctx.lineTo(cfg.gw + cfg.gwoff, xHeight);
             ctx.stroke();
         }
-    };
-
-    var getXAxisHeight = function () {
-        var yDiff = yMaxMin.max - yMaxMin.min;
-        var hDiff = (graph.height.max - graph.height.min) * cfg.gh;
-        var offset = (yMaxMin.max > 0 ? 0 : -hDiff / 2);
-
-        if (yDiff) {
-            var yStep = hDiff / yDiff;
-            var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
-            return yOffset + yMaxMin.min * yStep;
-        } else {
-            return cfg.gh + cfg.ghoff - cfg.gh * graph.height.min + offset;
-        }
-    };
-
-    var drawText = function () {
-        ctx.textAlign = "center";
-        drawTitle();
-        drawXText();
-        drawYText();
     };
 
     var drawTitle = function () {
@@ -275,6 +196,59 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
             drawConstantYText(lim.min, yOffset);
 
         drawYTitle();
+    };
+
+    var drawConstantLine = function () {
+        if (graph.record[0] >= 0) {
+            var constHeight = cfg.gh + cfg.ghoff -
+                cfg.gh * (graph.height.max + graph.height.min) / 2;
+        } else {
+            var constHeight = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
+        }
+        drawHorizontalLine(constHeight, cfg.gwoff, cfg.gw + cfg.gwoff);
+    };
+
+    var drawLines = function () {
+        var length = graph.record.length;
+        var xStep = cfg.gw / (length - 1);
+        var yStep = (graph.height.max - graph.height.min) * cfg.gh /
+            (yMaxMin.max - yMaxMin.min);
+        var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
+        ctx.moveTo(cfg.gwoff, yOffset - (graph.record[0] - yMaxMin.min) * yStep);
+
+        for (let i = 1; i < length; i += 1)
+            ctx.lineTo(i * xStep + cfg.gwoff,
+                yOffset - (graph.record[i] - yMaxMin.min) * yStep);
+
+        ctx.stroke();
+    };
+
+    var getXAxisHeight = function () {
+        var yDiff = yMaxMin.max - yMaxMin.min;
+        var hDiff = (graph.height.max - graph.height.min) * cfg.gh;
+        var offset = (yMaxMin.max > 0 ? 0 : -hDiff / 2);
+
+        if (yDiff) {
+            var yStep = hDiff / yDiff;
+            var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
+            return yOffset + yMaxMin.min * yStep;
+        } else {
+            return cfg.gh + cfg.ghoff - cfg.gh * graph.height.min + offset;
+        }
+    };
+
+    var drawHorizontalLine = function (y, x1 = 0, x2 = width) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
+        ctx.stroke();
+    };
+
+    var drawVerticalLine = function (x, y1 = 0, y2 = height) {
+        ctx.beginPath();
+        ctx.moveTo(x, y1);
+        ctx.lineTo(x, y2);
+        ctx.stroke();
     };
 
     var setupYText = function () {
@@ -462,6 +436,35 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         var yoff = cfg.gh + cfg.ghoff * 1.1;
         ctx.fillText(xValue, xoff, yoff);
         ctx.restore();
+    };
+
+    var clear = function () {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawGrid();
+        pointLine.visible = false;
+    };
+
+    var drawGrid = function () {
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgb(200, 200, 200)";
+
+        for (let i = 1; i < 10; i += 1) {
+            drawVerticalLine(cfg.gwoff + i * cfg.gw / 10, cfg.ghoff, cfg.gh + cfg.ghoff);
+            drawHorizontalLine(cfg.ghoff + i * cfg.gh / 10, cfg.gwoff, cfg.gw + cfg.gwoff);
+        }
+        drawEdges();
+    };
+
+    var drawEdges = function () {
+        ctx.strokeStyle = "black";
+        drawVerticalLine(cfg.gwoff, cfg.ghoff, cfg.gh + cfg.ghoff);
+        drawHorizontalLine(cfg.ghoff, cfg.gwoff, cfg.gw + cfg.gwoff);
+        drawVerticalLine(cfg.gwoff + 10 * cfg.gw / 10, cfg.ghoff, cfg.gh + cfg.ghoff);
+        drawHorizontalLine(cfg.ghoff + 10 * cfg.gh / 10, cfg.gwoff, cfg.gw + cfg.gwoff);
+    };
+
+    var setConfig = function (config) {
+        Object.assign(cfg, config);
     };
 
     drawGrid();
