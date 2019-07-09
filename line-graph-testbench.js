@@ -2,15 +2,29 @@
 
 "use strict";
 
-var fillArrayCoordinates = function (array, count, func) {
-    for (let i = 0; i < count; i += 1)
-        array.push(func(i));
-};
-
 var testbench = function () {
+    var graph = {};
     var canvas = document.getElementById("canvas");
-    var graph = lineGraph(canvas);
 
+    var updateGraph = function (e) {
+        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth;
+        graph = lineGraph(canvas, convertHour);
+        graph.setConfig(graphConfig);
+        graph.clear();
+        graph.draw(temperature);
+        graph.draw(pressure);
+    };
+
+    var convertHour = function (x) {
+        var now = new Date();
+        var xSeconds = 60 - Math.round( 60 * x );
+        var xTime = new Date(now.getTime() - xSeconds * 1000);
+        var xFormat = xTime.getHours() + ":" + xTime.getMinutes() + ":"
+            + xTime.getSeconds();
+        return xFormat;
+    };
+    
     var graphConfig = {
         title: {
             name: "Line Graph Testbench",
@@ -18,7 +32,7 @@ var testbench = function () {
             font: "large sans-serif"
         },
         xAxis: {
-            values: ["12:30", "13:00", "13:30"],
+            values: [],
             textColor: "brown",
             font: "medium sans-serif"
         },
@@ -45,9 +59,9 @@ var testbench = function () {
             verticalTitle: true
         },
         xAxis: {
-            
+
         }
-    }
+    };
 
     var pressure = {
         record: [],
@@ -68,15 +82,73 @@ var testbench = function () {
         xAxis: {
 
         }
+    };
+    
+    var mouseHandler = function (e) {
+        graph.clear();
+        graph.draw(temperature, e.offsetX, e.offsetY);
+        graph.draw(pressure, e.offsetX, e.offsetY);
+    };
+    
+    var updateGraphTime = function() {
+        var now = new Date();
+        var prev = new Date(now.getTime() - 60000);
+        var nowFormat = now.getHours() + ":" + now.getMinutes() + ":"
+            + now.getSeconds();
+            var prevFormat = prev.getHours() + ":" + prev.getMinutes() + ":"
+            + prev.getSeconds();
+            
+        graphConfig.xAxis.values = [prevFormat, nowFormat];
+        
+        temperature.record.shift();
+        temperature.record.push(temperatureAverage.avg);
+        pressure.record.shift();
+        pressure.record.push(pressureAverage.avg);
+
+        graph.clear();
+        graph.setConfig(graphConfig);
+        graph.draw(temperature);
+        graph.draw(pressure);
+        
+        setTimeout(updateGraphTime, 500);
+    };
+    
+    var updateAverage = function(avg, min, max) {
+        var newest = Math.random() * (max - min) + min;
+        var oldest = avg.shift();
+        avg.push(newest);
+        avg.total -= oldest;
+        avg.total += newest;
+        avg.avg = avg.total / avg.length;
+    };
+
+    var autoUpdateAverage = function() {
+        updateAverage(temperatureAverage, -10, 20);
+        updateAverage(pressureAverage, 0, 80);
+        setTimeout(autoUpdateAverage, 50);
+    };
+    
+    var temperatureAverage = [], pressureAverage = [];
+    temperatureAverage.total = pressureAverage.total = 0;
+    temperatureAverage.avg = pressureAverage.avg = 0;
+    for (let i=0; i < 100; i++) {
+        temperature.record.push(0);
+        temperatureAverage.push(0);
+        pressure.record.push(0);
+        pressureAverage.push(0);
     }
 
-    fillArrayCoordinates(temperature.record, 100, (i) => Math.sin(0.0635 * i) * 3 + 5);
-    fillArrayCoordinates(pressure.record, 100, (i) => Math.sqrt(i) * 4);
+    for (let i=0; i < 100; i++) {
+        updateAverage(temperatureAverage, -10, 20);
+        updateAverage(pressureAverage, 0, 80);
+    }
 
-    graph.setConfig(graphConfig);
-    graph.clear();
-    graph.draw(temperature);
-    graph.draw(pressure);
+    updateGraph();
+    updateGraphTime();
+    autoUpdateAverage();
+
+    window.addEventListener("resize", updateGraph);
+    canvas.addEventListener("mousemove", mouseHandler);
 };
 
 testbench();

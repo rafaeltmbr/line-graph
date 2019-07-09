@@ -1,11 +1,12 @@
 /*jslint browser for white */
 
-var lineGraph = function (canvasGraph) {
+var lineGraph = function (canvasGraph, xAxisValueCallback) {
     "use strict";
     var canvas = canvasGraph;
     var ctx = canvas.getContext("2d");
     var width = canvas.width;
     var height = canvas.height;
+    var xCallback = xAxisValueCallback;
     var cfg = {
         title: {
             name: "",
@@ -22,8 +23,9 @@ var lineGraph = function (canvasGraph) {
         },
         gw: width * 0.8,
         gwoff: (width - width * 0.8) * 0.75,
-        gh: height * 0.8,
-        ghoff: (height - height * 0.8) / 2
+        gh: height * 0.7,
+        ghoff: (height - height * 0.7) / 2,
+        pointRadius: 5
     };
 
     const drawDefault = {
@@ -49,12 +51,20 @@ var lineGraph = function (canvasGraph) {
     };
 
     var graph = {};
+    var yMaxMin = {};
+    var pointLine = {
+        x: -1,
+        y: -1,
+        visible: false
+    }
 
-    var draw = function (userConfig) {
+    var draw = function (userConfig, mouseOverX = -1, mouseOverY = -1) {
         ctx.save();
 
         setupGraph(userConfig);
+        yMaxMin = maxMin(graph.record);
         drawGraph();
+        drawMarkPoint(mouseOverX, mouseOverY);
 
         ctx.restore();
     };
@@ -66,6 +76,7 @@ var lineGraph = function (canvasGraph) {
     var clear = function () {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawGrid();
+        pointLine.visible = false;
     };
 
     var setupGraph = function (userConfig) {
@@ -75,9 +86,8 @@ var lineGraph = function (canvasGraph) {
     };
 
     var drawGraph = function () {
-        var yMaxMin = maxMin(graph.record);
-        drawLineGraph(yMaxMin);
-        drawText(yMaxMin);
+        drawLineGraph();
+        drawText();
     };
 
     var drawGrid = function () {
@@ -113,13 +123,13 @@ var lineGraph = function (canvasGraph) {
         ctx.stroke();
     };
 
-    var drawLineGraph = function (yMaxMin) {
+    var drawLineGraph = function () {
         setupLines(graph.color);
-        drawCurve(yMaxMin);
-        drawCurveShadow(yMaxMin);
+        drawCurve();
+        drawCurveShadow();
 
         if (graph.xAxis)
-            drawXAxis(yMaxMin);
+            drawXAxis();
     };
 
     var maxMin = function (array) {
@@ -147,11 +157,11 @@ var lineGraph = function (canvasGraph) {
         ctx.fillStyle = color.shadow;
     };
 
-    var drawCurve = function (yMaxMin) {
+    var drawCurve = function () {
         if (yMaxMin.max - yMaxMin.min === 0)
             drawConstantLine(graph);
         else
-            drawLines(yMaxMin);
+            drawLines();
     };
 
     var drawConstantLine = function () {
@@ -164,7 +174,7 @@ var lineGraph = function (canvasGraph) {
         drawHorizontalLine(constHeight, cfg.gwoff, cfg.gw + cfg.gwoff);
     };
 
-    var drawLines = function (yMaxMin) {
+    var drawLines = function () {
         var length = graph.record.length;
         var xStep = cfg.gw / (length - 1);
         var yStep = (graph.height.max - graph.height.min) * cfg.gh /
@@ -179,7 +189,7 @@ var lineGraph = function (canvasGraph) {
         ctx.stroke();
     };
 
-    var drawCurveShadow = function (yMaxMin) {
+    var drawCurveShadow = function () {
         var constantValue = yMaxMin.max - yMaxMin.min === 0;
         var bottom = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
         if (constantValue && yMaxMin.max <= 0)
@@ -191,17 +201,19 @@ var lineGraph = function (canvasGraph) {
         ctx.fill();
     };
 
-    var drawXAxis = function (yMaxMin) {
+    var drawXAxis = function () {
         ctx.beginPath();
         ctx.strokeStyle = graph.color.axis;
 
-        var xHeight = getXAxisHeight(yMaxMin);
-        ctx.moveTo(cfg.gwoff, xHeight);
-        ctx.lineTo(cfg.gw + cfg.gwoff, xHeight);
-        ctx.stroke();
+        var xHeight = getXAxisHeight();
+        if(xHeight <= cfg.gh + cfg.ghoff) {
+            ctx.moveTo(cfg.gwoff, xHeight);
+            ctx.lineTo(cfg.gw + cfg.gwoff, xHeight);
+            ctx.stroke();
+        }
     };
 
-    var getXAxisHeight = function (yMaxMin) {
+    var getXAxisHeight = function () {
         var yDiff = yMaxMin.max - yMaxMin.min;
         var hDiff = (graph.height.max - graph.height.min) * cfg.gh;
         var offset = (yMaxMin.max > 0 ? 0 : -hDiff / 2);
@@ -215,11 +227,11 @@ var lineGraph = function (canvasGraph) {
         }
     };
 
-    var drawText = function (yMaxMin) {
+    var drawText = function () {
         ctx.textAlign = "center";
         drawTitle();
         drawXText();
-        drawYText(yMaxMin);
+        drawYText();
     };
 
     var drawTitle = function () {
@@ -238,15 +250,15 @@ var lineGraph = function (canvasGraph) {
 
         for (let i = 0; i < steps; i += 1)
             ctx.fillText(cfg.xAxis.values[i] + "", cfg.gwoff + space * i,
-                cfg.gh + cfg.ghoff * 1.2);
+                cfg.gh + cfg.ghoff * 1.4);
     };
 
-    var drawYText = function (yMaxMin) {
+    var drawYText = function () {
         if (graph.yAxis.lines < 2)
             return;
 
         setupYText();
-        var lim = getFormattedLimit(graph.record, yMaxMin)
+        var lim = getFormattedLimit(yMaxMin)
         var diff = lim.max - lim.min;
         var valueStep = diff / (graph.yAxis.lines - 1);
         var yOffset = cfg.gh - graph.height.min * cfg.gh + cfg.ghoff;
@@ -268,10 +280,10 @@ var lineGraph = function (canvasGraph) {
         ctx.textBaseline = "middle";
     };
 
-    var getFormattedLimit = function (record, yMaxMin) {
+    var getFormattedLimit = function (lim) {
         return {
-            min: formatMin(yMaxMin.min),
-            max: formatMax(yMaxMin.max)
+            min: formatMin(lim.min),
+            max: formatMax(lim.max)
         };
     };
 
@@ -362,6 +374,83 @@ var lineGraph = function (canvasGraph) {
         }
 
         return n;
+    };
+
+    var drawMarkPoint = function (x, y) {
+        if (isPointOverGraph(x, y)) {
+            var xoff = x - cfg.gwoff;
+            var len = graph.record.length;
+            var index = xoff * (graph.record.length-1) / cfg.gw;
+            var indexL = Math.floor(index);
+            var indexH = indexL + 1 >= len ? len-1 : indexL + 1;
+            var recordL = graph.record[indexL];
+            var recordH = graph.record[indexH];
+            var record = (recordH - recordL) * (index - indexL) + recordL;
+            var deltaY = (graph.height.max - graph.height.min) * cfg.gh /
+                (yMaxMin.max - yMaxMin.min);
+            var baseY = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
+            var pointY = baseY - (record - yMaxMin.min) * deltaY;
+            drawPointLine(x);
+            drawPoint(x, pointY);
+            drawYValue(record.toFixed(graph.yAxis.precision),
+                x, pointY - 2 * cfg.pointRadius);
+            drawXValue(xoff / cfg.gw);
+        }
+    };
+
+    var isPointOverGraph = function (x, y) {
+        return x >= cfg.gwoff && x < cfg.gw + cfg.gwoff &&
+            y >= cfg.ghoff && y < cfg.gh + cfg.ghoff;
+    };
+
+    var drawPoint = function (x, y) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.fillStyle = graph.color.stroke;
+        ctx.arc(x, y, cfg.pointRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    };
+
+    var drawYValue = function(value, x, y) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.font = cfg.yAxis.font;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillStyle = graph.color.stroke;
+        ctx.fillText(value + "", x, y);
+        ctx.restore();
+    };
+
+    var drawPointLine = function(x) {
+        if (pointLine.visible)
+            return;
+        pointLine.visible = true;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgb(160, 160, 160)";
+        drawVerticalLine(x, cfg.ghoff, cfg.gh + cfg.ghoff);
+        ctx.restore();
+    };
+
+    var drawXValue = function (x) {
+        if (!xCallback)
+            return;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.textBaseline = "top";
+        ctx.textAlign = "center";
+        ctx.font = cfg.xAxis.font;
+        ctx.fillStyle = cfg.xAxis.textColor;
+        var xValue = xCallback(x) + "";
+        var xoff = cfg.gwoff + cfg.gw * x;
+        var yoff = cfg.gh + cfg.ghoff * 1.1;
+        ctx.fillText(xValue, xoff, yoff);
+        ctx.restore();
     };
 
     drawGrid();
