@@ -151,7 +151,9 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
     };
 
     var drawCurveShadow = function () {
-        var constantValue = yMaxMin.max - yMaxMin.min === 0;
+        if ( yMaxMin.max === yMaxMin.min && yMaxMin.max === 0 )
+            return;
+        
         var bottom = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
         var top = cfg.gh + cfg.ghoff - cfg.gh * graph.height.max;
         var xAxis = getXAxisHeight();
@@ -172,7 +174,8 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
         var yMin = cfg.gh + cfg.ghoff - cfg.gh * graph.height.min;
         var xHeight = getXAxisHeight();
 
-        if (xHeight > yMin || xHeight < yMax)
+        if (xHeight > yMin || xHeight < yMax
+            || (yMaxMin.max === yMaxMin.min && yMaxMin.max === 0) )
             return;
 
         ctx.save();
