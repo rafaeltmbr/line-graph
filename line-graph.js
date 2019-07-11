@@ -189,10 +189,10 @@ var lineGraph = function (canvasGraph, xAxisValueCallback) {
     };
 
     var drawTitle = function () {
-        ctx.textBaseline = "bottom";
+        ctx.textBaseline = "middle";
         ctx.font = cfg.title.font;
         ctx.fillStyle = cfg.title.color;
-        ctx.fillText(cfg.title.name, cfg.gw / 2 + cfg.gwoff, cfg.ghoff * 0.75);
+        ctx.fillText(cfg.title.name, cfg.gw / 2 + cfg.gwoff, cfg.ghoff/2);
     };
 
     var drawXText = function () {
